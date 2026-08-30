@@ -514,3 +514,120 @@ document.getElementById('addVehicleBtn').addEventListener('click', async () => {
 });
 
 document.getElementById('refreshVehiclesBtn').addEventListener('click', loadVehiclesTab);
+// ---------- Reports ----------
+async function loadReports() {
+  document.getElementById('reportsList').innerHTML = '<div class="loading-state">Loading…</div>';
+  try {
+    const res = await fetch(`${API_BASE}/api/reports`, { headers: { 'x-api-key': apiKey } });
+    if (!res.ok) { showError('reportsError', "Couldn't load reports."); return; }
+    const reports = await res.json();
+    hideError('reportsError');
+    renderReports(reports);
+  } catch (e) {
+    showError('reportsError', "Network error loading reports.");
+  }
+}
+
+function timeAgoReport(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function renderReports(reports) {
+  document.getElementById('reportsCount').textContent = `${reports.length} REPORTS`;
+  const list = document.getElementById('reportsList');
+  if (reports.length === 0) {
+    list.innerHTML = '<div class="empty-state">No reports yet.</div>';
+    return;
+  }
+  list.innerHTML = reports.map(r => {
+    const isNew = r.status === 'new';
+    return `
+      <div class="row">
+        <div>
+          <div class="row-title">${escapeHtml(r.plate)}</div>
+          <div class="row-sub">${escapeHtml(r.message)} · ${timeAgoReport(r.created_at)}</div>
+        </div>
+        <button class="btn-small ${isNew ? 'status-red' : 'status-green'}" onclick="toggleReportStatus(${r.id}, '${r.status}')">
+          ${isNew ? '● New' : '✓ Resolved'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+async function toggleReportStatus(reportId, currentStatus) {
+  const newStatus = currentStatus === 'new' ? 'resolved' : 'new';
+  try {
+    const res = await fetch(`${API_BASE}/api/reports/${reportId}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (res.ok) await loadReports();
+    else showError('reportsError', "Couldn't update report status.");
+  } catch (e) {
+    showError('reportsError', "Network error updating report.");
+  }
+}
+
+document.getElementById('refreshReportsBtn').addEventListener('click', loadReports);
+
+// ---------- Settings ----------
+async function loadSettings() {
+  hideError('settingsError');
+  document.getElementById('settingsSuccess').classList.add('hidden');
+  try {
+    const res = await fetch(`${API_BASE}/api/settings`);
+    if (!res.ok) { showError('settingsError', "Couldn't load settings."); return; }
+    const data = await res.json();
+    document.getElementById('settingsPhone').value = data.dispatch_phone || '';
+    document.getElementById('settingsWhatsapp').value = data.dispatch_whatsapp || '';
+  } catch (e) {
+    showError('settingsError', "Network error loading settings.");
+  }
+}
+
+document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+  const dispatch_phone = document.getElementById('settingsPhone').value.trim();
+  const dispatch_whatsapp = document.getElementById('settingsWhatsapp').value.trim();
+  hideError('settingsError');
+  document.getElementById('settingsSuccess').classList.add('hidden');
+  const btn = document.getElementById('saveSettingsBtn');
+  btn.disabled = true; btn.textContent = "Saving...";
+  try {
+    const res = await fetch(`${API_BASE}/api/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+      body: JSON.stringify({ dispatch_phone, dispatch_whatsapp })
+    });
+    if (!res.ok) { showError('settingsError', "Couldn't save settings."); }
+    else {
+      const el = document.getElementById('settingsSuccess');
+      el.textContent = "Saved. Drivers will use this contact info going forward.";
+      el.classList.remove('hidden');
+    }
+  } catch (e) {
+    showError('settingsError', "Network error saving settings.");
+  }
+  btn.disabled = false; btn.textContent = "Save contact info";
+});
+
+// ---------- Utility ----------
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Allow Enter key on API key field
+document.getElementById('apiKeyInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('unlockBtn').click();
+});
+</script>
+
+</body>
+</html>
