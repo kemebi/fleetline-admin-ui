@@ -109,6 +109,15 @@
     font-size: 13px;
     color: var(--red);
   }
+  .success-box {
+    padding: 12px;
+    background: #17281C;
+    border: 1px solid var(--green);
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--green);
+  }
   .panel {
     background: var(--panel);
     border-radius: 12px;
@@ -122,6 +131,8 @@
   }
   .field-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
   .field-row input { flex: 1 1 140px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--steel); margin-bottom: 6px; font-weight: 500; }
   .tabs { display: flex; gap: 6px; background: var(--panel); padding: 4px; border-radius: 8px; flex-wrap: wrap; }
   .tab-btn {
     padding: 7px 14px; border-radius: 6px; border: none;
@@ -183,6 +194,7 @@
         <button class="tab-btn active" id="tabDriversBtn">Drivers</button>
         <button class="tab-btn" id="tabVehiclesBtn">Vehicles</button>
         <button class="tab-btn" id="tabReportsBtn">Reports</button>
+        <button class="tab-btn" id="tabSettingsBtn">Settings</button>
       </div>
       <button class="btn-refresh" id="logoutBtn">Log out</button>
     </div>
@@ -236,9 +248,27 @@
       </div>
       <div id="reportsList"></div>
     </div>
+
+    <!-- Settings tab -->
+    <div id="settingsTab" class="hidden">
+      <div class="panel">
+        <div class="panel-title">📞 Dispatch contact info</div>
+        <div style="font-size:12px; color:var(--steel); margin-bottom:14px;">This is the number drivers reach when they tap "Call Dispatch" or "WhatsApp Dispatch" in the driver app.</div>
+        <div class="field">
+          <label>Phone number (for calls)</label>
+          <input id="settingsPhone" placeholder="e.g. +2349164574145">
+        </div>
+        <div class="field">
+          <label>WhatsApp number (digits only, no +)</label>
+          <input id="settingsWhatsapp" placeholder="e.g. 2349164574145">
+        </div>
+        <div id="settingsError" class="error-box hidden"></div>
+        <div id="settingsSuccess" class="success-box hidden"></div>
+        <button class="btn-primary" id="saveSettingsBtn">Save contact info</button>
+      </div>
+    </div>
   </div>
-</main>
-<script>
+</main><script>
 const API_BASE = "https://fleetline-backend-production.up.railway.app";
 let apiKey = "";
 let driversCache = [];
@@ -295,16 +325,20 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 document.getElementById('tabDriversBtn').addEventListener('click', () => switchTab('drivers'));
 document.getElementById('tabVehiclesBtn').addEventListener('click', () => switchTab('vehicles'));
 document.getElementById('tabReportsBtn').addEventListener('click', () => switchTab('reports'));
+document.getElementById('tabSettingsBtn').addEventListener('click', () => switchTab('settings'));
 
 function switchTab(tab) {
   document.getElementById('tabDriversBtn').classList.toggle('active', tab === 'drivers');
   document.getElementById('tabVehiclesBtn').classList.toggle('active', tab === 'vehicles');
   document.getElementById('tabReportsBtn').classList.toggle('active', tab === 'reports');
+  document.getElementById('tabSettingsBtn').classList.toggle('active', tab === 'settings');
   document.getElementById('driversTab').classList.toggle('hidden', tab !== 'drivers');
   document.getElementById('vehiclesTab').classList.toggle('hidden', tab !== 'vehicles');
   document.getElementById('reportsTab').classList.toggle('hidden', tab !== 'reports');
+  document.getElementById('settingsTab').classList.toggle('hidden', tab !== 'settings');
   if (tab === 'vehicles') loadVehiclesTab();
   if (tab === 'reports') loadReports();
+  if (tab === 'settings') loadSettings();
 }
 
 function showError(elId, msg) {
@@ -536,24 +570,4 @@ async function toggleReportStatus(reportId, currentStatus) {
     if (res.ok) await loadReports();
     else showError('reportsError', "Couldn't update report status.");
   } catch (e) {
-    showError('reportsError', "Network error updating report.");
-  }
-}
-
-document.getElementById('refreshReportsBtn').addEventListener('click', loadReports);
-
-// ---------- Utility ----------
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-// Allow Enter key on API key field
-document.getElementById('apiKeyInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('unlockBtn').click();
-});
-</script>
-
-</body>
-</html>
+    showError('rep
